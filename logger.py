@@ -1,7 +1,7 @@
 import sqlite3
 import pickle
 import os
-from progsnap import PS2
+from .progsnap import PS2
 
 def get(json_obj, key, default=None):
     if key in json_obj:
@@ -63,35 +63,35 @@ class SQLiteLogger:
         self.create_tables()
 
     # TODO: This should support batch operations but currently does not
-    def __connect(self):
+    def _connect(self):
         return sqlite3.connect(self.db_path)
 
-    def __create_table(self, table_name, column_map):
+    def _create_table(self, table_name, column_map):
         column_text = [f"`{k}` {v}" for k, v in column_map.items()]
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             c.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({','.join(column_text)})")
             conn.commit()
 
     def create_tables(self):
-        self.__create_table(MAIN_TABLE, MAIN_TABLE_COLUMNS)
-        self.__create_table(CODE_STATES_TABLE, CODE_STATES_TABLE_COLUMNS)
+        self._create_table(MAIN_TABLE, MAIN_TABLE_COLUMNS)
+        self._create_table(CODE_STATES_TABLE, CODE_STATES_TABLE_COLUMNS)
         # Not actually used, but helpful to have for clean loading
-        self.__create_table(METADATA_TABLE, METADATA_TABLE_COLUMNS)
+        self._create_table(METADATA_TABLE, METADATA_TABLE_COLUMNS)
         self.__add_metadata()
-        self.__create_table(PROBLEM_TABLE, PROBLEM_TABLE_COLUMNS)
-        self.__create_table(SUBJECT_TABLE, SUBJECT_TABLE_COLUMNS)
+        self._create_table(PROBLEM_TABLE, PROBLEM_TABLE_COLUMNS)
+        self._create_table(SUBJECT_TABLE, SUBJECT_TABLE_COLUMNS)
         self.__add_code_index()
 
     def __add_code_index(self):
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             c.execute(f"CREATE INDEX IF NOT EXISTS idx_Code ON {CODE_STATES_TABLE} (Code)")
             conn.commit()
 
     def __add_metadata(self):
         # get the number of rows in the metadata table
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             c.execute(f"SELECT COUNT(*) FROM {METADATA_TABLE}")
             count = c.fetchone()[0]
@@ -115,7 +115,7 @@ class SQLiteLogger:
         columns = '`' + '`,`'.join(column_map.keys()) + '`'
         values = ','.join(['?'] * len(column_map))
         id = None
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
             # print(query)
@@ -125,7 +125,7 @@ class SQLiteLogger:
         return id
 
     def clear_table(self, table_name):
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             c.execute(f"DELETE FROM {table_name}")
             conn.commit()
@@ -135,7 +135,7 @@ class SQLiteLogger:
         # using INSERT OR IGNORE, with a UNIQUE Code column, but
         # I'm keeping it this way for now for backwards compatibility
         result = None
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             c.execute(f"SELECT CodeStateID FROM {CODE_STATES_TABLE} WHERE Code = ?", (code_state,))
             result = c.fetchone()
@@ -163,7 +163,7 @@ class SQLiteLogger:
         self.__insert_map(MAIN_TABLE, main_table_map)
 
     def get_starter_code(self, problem_id):
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             c.execute(f"SELECT StarterCode FROM {PROBLEM_TABLE} WHERE ProblemID = ?", (problem_id,))
             result = c.fetchone()
@@ -172,7 +172,7 @@ class SQLiteLogger:
             return result[0]
 
     def set_starter_code(self, problem_id, starter_code):
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             query = f"INSERT OR IGNORE INTO {PROBLEM_TABLE} (ProblemID) VALUES (?);"
             c.execute(query, (problem_id,))
@@ -183,7 +183,7 @@ class SQLiteLogger:
     def get_or_set_subject_condition(self, subject_id, condition_to_set):
         if subject_id is None:
             return condition_to_set
-        with self.__connect() as conn:
+        with self._connect() as conn:
             c = conn.cursor()
             c.execute(f"SELECT IsInterventionGroup FROM {SUBJECT_TABLE} WHERE SubjectID = ?", (subject_id,))
             result = c.fetchone()

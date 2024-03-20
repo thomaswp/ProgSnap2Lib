@@ -3,7 +3,7 @@ import os
 from os import path
 import pandas as pd
 from pandas import DataFrame
-from progsnap import PS2
+from .progsnap import PS2
 
 class PS2DataProvider(ABC):
 
