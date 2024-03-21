@@ -130,6 +130,13 @@ class SQLiteLogger:
             c.execute(f"DELETE FROM {table_name}")
             conn.commit()
 
+    def execute_query(self, query, args) -> list[any]:
+        with self._connect() as conn:
+            c = conn.cursor()
+            c.execute(query, args)
+            conn.commit()
+            return c.fetchall()
+
     def __get_codestate_id(self, code_state):
         # TODO: This could be more efficient and concurrency-safe
         # using INSERT OR IGNORE, with a UNIQUE Code column, but
